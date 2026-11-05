@@ -1,0 +1,129 @@
+#cloud-config
+# Root CA - Cloud-Init User-Data (Debian 12 / Ubuntu 24.04 & 26.04 compatible)
+# This VM is designed to remain offline except during signing ceremonies.
+
+hostname: root-ca
+fqdn: root-ca.dc.paradigm-works.com
+manage_etc_hosts: true
+
+users:
+  - default
+  - name: stepadmin
+    gecos: Step CA Administrator
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: [sudo, adm]
+    shell: /bin/bash
+    lock_passwd: true
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - curl
+  - jq
+  - magic-wormhole
+  - qemu-guest-agent
+  - ufw
+
+write_files:
+  - path: /etc/sysctl.d/99-disable-ipv6.conf
+    permissions: "0644"
+    owner: root:root
+    content: |
+      net.ipv6.conf.all.disable_ipv6 = 1
+      net.ipv6.conf.default.disable_ipv6 = 1
+
+  - path: /usr/local/bin/init-root-ca.sh
+    permissions: "0750"
+    owner: root:root
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      STEPPATH="${STEPPATH:-/etc/step-ca}"
+      mkdir -p "${STEPPATH}/certs" "${STEPPATH}/secrets"
+      chmod 0700 "${STEPPATH}" "${STEPPATH}/secrets"
+
+      echo "========================================================="
+      echo " Initializing Offline Root CA: Paradigm Works Root CA"
+      echo " You will be prompted to create the Root CA passphrase."
+      echo " NOTE: Record this passphrase in encrypted Standard Notes!"
+      echo "========================================================="
+
+      if [ -f "${STEPPATH}/certs/root_ca.crt" ]; then
+        echo "ERROR: Root CA already initialized at ${STEPPATH}/certs/root_ca.crt"
+        exit 1
+      fi
+
+      step certificate create "Paradigm Works Root CA" \
+        "${STEPPATH}/certs/root_ca.crt" \
+        "${STEPPATH}/secrets/root_ca_key" \
+        --profile root-ca \
+        --kty EC \
+        --curve P-256 \
+        --not-after 175200h
+
+      chmod 0644 "${STEPPATH}/certs/root_ca.crt"
+      chmod 0600 "${STEPPATH}/secrets/root_ca_key"
+
+      echo ""
+      echo "[OK] Root CA successfully created."
+      echo "Public Root Certificate: ${STEPPATH}/certs/root_ca.crt"
+      echo "Root Private Key:        ${STEPPATH}/secrets/root_ca_key"
+      echo ""
+      step certificate inspect "${STEPPATH}/certs/root_ca.crt" --short
+
+  - path: /usr/local/bin/sign-intermediate-csr.sh
+    permissions: "0750"
+    owner: root:root
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      STEPPATH="${STEPPATH:-/etc/step-ca}"
+      ROOT_CERT="${STEPPATH}/certs/root_ca.crt"
+      ROOT_KEY="${STEPPATH}/secrets/root_ca_key"
+
+      if [ $# -lt 1 ]; then
+        echo "Usage: $0 <path-to-intermediate.csr> [validity-hours, default 26280h (3y)]"
+        exit 1
+      fi
+
+      CSR_FILE="$1"
+      VALIDITY="${2:-26280h}"
+      OUTPUT_CERT="${CSR_FILE%.csr}.crt"
+
+      if [ ! -f "${ROOT_CERT}" ] || [ ! -f "${ROOT_KEY}" ]; then
+        echo "ERROR: Root CA not found. Run /usr/local/bin/init-root-ca.sh first."
+        exit 1
+      fi
+
+      echo "Signing Intermediate CSR: ${CSR_FILE}"
+      echo "Validity: ${VALIDITY}"
+
+      step certificate sign "${CSR_FILE}" "${ROOT_CERT}" "${ROOT_KEY}" \
+        --profile intermediate-ca \
+        --not-after "${VALIDITY}" \
+        --out "${OUTPUT_CERT}"
+
+      echo ""
+      echo "[OK] Intermediate certificate generated: ${OUTPUT_CERT}"
+      echo ""
+      step certificate inspect "${OUTPUT_CERT}" --short
+
+runcmd:
+  # Install Smallstep repository
+  - mkdir -p /etc/apt/trusted.gpg.d
+  - curl -fsSL https://packages.smallstep.com/smallstep.gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/smallstep.gpg
+  - echo "deb [signed-by=/etc/apt/trusted.gpg.d/smallstep.gpg] https://packages.smallstep.com/debian-security/ stable main" > /etc/apt/sources.list.d/smallstep.list
+  - apt-get update
+  - apt-get install -y step-cli
+
+  # Lock down firewall completely (deny all incoming)
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw --force enable
+
+  # Create directories
+  - mkdir -p /etc/step-ca/certs /etc/step-ca/secrets /root/ceremonies
+  - chmod 0700 /etc/step-ca /etc/step-ca/secrets /root/ceremonies

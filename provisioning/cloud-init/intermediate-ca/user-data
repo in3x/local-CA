@@ -1,0 +1,274 @@
+#cloud-config
+# Intermediate CA - Cloud-Init User-Data (Debian 12 / Ubuntu 24.04 & 26.04 compatible)
+# FQDN: ica.dc.paradigm-works.com
+
+hostname: ica
+fqdn: ica.dc.paradigm-works.com
+manage_etc_hosts: true
+
+users:
+  - default
+  - name: stepadmin
+    gecos: Step CA Administrator
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: [sudo, adm]
+    shell: /bin/bash
+    lock_passwd: true
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - curl
+  - jq
+  - magic-wormhole
+  - qemu-guest-agent
+  - ufw
+
+write_files:
+  - path: /etc/systemd/system/step-ca.service
+    permissions: "0644"
+    owner: root:root
+    content: |
+      [Unit]
+      Description=Smallstep CA Server
+      Documentation=https://smallstep.com/docs/step-ca
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=simple
+      User=step
+      Group=step
+      Environment=STEPPATH=/etc/step-ca
+      ExecStart=/usr/bin/step-ca /etc/step-ca/config/ca.json --password-file=/etc/step-ca/secrets/password.txt
+      ExecReload=/bin/kill -HUP $MAINPID
+      Restart=on-failure
+      RestartSec=10
+      LimitNOFILE=65536
+
+      # Security Sandbox
+      ProtectSystem=full
+      ProtectHome=true
+      NoNewPrivileges=true
+      PrivateTmp=true
+      AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /usr/local/bin/request-intermediate-csr.sh
+    permissions: "0750"
+    owner: root:root
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      STEPPATH="${STEPPATH:-/etc/step-ca}"
+      SECRETS_DIR="${STEPPATH}/secrets"
+      CERTS_DIR="${STEPPATH}/certs"
+      CEREMONY_DIR="/root/ceremonies"
+
+      mkdir -p "${SECRETS_DIR}" "${CERTS_DIR}" "${CEREMONY_DIR}"
+      chmod 0700 "${SECRETS_DIR}" "${CEREMONY_DIR}"
+
+      echo "========================================================="
+      echo " Generating Intermediate CA Key and CSR"
+      echo " FQDN: ica.dc.paradigm-works.com"
+      echo "========================================================="
+
+      if [ ! -f "${SECRETS_DIR}/password.txt" ]; then
+        echo "Generating random daemon password for Intermediate CA..."
+        # 32 bytes base64 encoded
+        openssl rand -base64 32 | tr -d '\n' > "${SECRETS_DIR}/password.txt"
+        chmod 0600 "${SECRETS_DIR}/password.txt"
+        chown step:step "${SECRETS_DIR}/password.txt"
+        echo "[OK] Generated ${SECRETS_DIR}/password.txt"
+        echo "IMPORTANT: Backup this password into Standard Notes!"
+      fi
+
+      step certificate create "Paradigm Works Intermediate CA" \
+        "${CEREMONY_DIR}/intermediate.csr" \
+        "${SECRETS_DIR}/intermediate_ca_key" \
+        --csr \
+        --password-file "${SECRETS_DIR}/password.txt" \
+        --kty EC \
+        --curve P-256
+
+      chmod 0600 "${SECRETS_DIR}/intermediate_ca_key"
+      chown step:step "${SECRETS_DIR}/intermediate_ca_key"
+
+      echo ""
+      echo "[OK] CSR created at: ${CEREMONY_DIR}/intermediate.csr"
+      echo "Next step: Transfer this CSR to the Root CA to be signed."
+      echo "Use Magic Wormhole: wormhole send ${CEREMONY_DIR}/intermediate.csr"
+
+  - path: /etc/step-ca/templates/x509-leaf.tpl
+    permissions: "0644"
+    owner: root:root
+    content: |
+      {
+      	"subject": {
+      		"organization": "Paradigm Works",
+      		"country": "US",
+      		"commonName": {{ toJson .Subject.CommonName }}
+      	},
+      	"sans": {{ toJson .SANs }},
+      {{- if typeIs "*rsa.PublicKey" .Insecure.CR.PublicKey }}
+      	"keyUsage": ["keyEncipherment", "digitalSignature"],
+      {{- else }}
+      	"keyUsage": ["digitalSignature"],
+      {{- end }}
+      	"extKeyUsage": ["serverAuth", "clientAuth"],
+      	"basicConstraints": {
+      		"isCA": false
+      	}
+      }
+
+  - path: /usr/local/bin/bootstrap-intermediate.sh
+    permissions: "0750"
+    owner: root:root
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      STEPPATH="/etc/step-ca"
+      CONFIG_DIR="${STEPPATH}/config"
+      CERTS_DIR="${STEPPATH}/certs"
+      SECRETS_DIR="${STEPPATH}/secrets"
+      TEMPLATES_DIR="${STEPPATH}/templates"
+      CEREMONY_DIR="/root/ceremonies"
+
+      echo "========================================================="
+      echo " Bootstrapping Intermediate CA Service"
+      echo "========================================================="
+
+      if [ ! -f "${CEREMONY_DIR}/intermediate_ca.crt" ] || [ ! -f "${CEREMONY_DIR}/root_ca.crt" ]; then
+        echo "ERROR: Missing ${CEREMONY_DIR}/intermediate_ca.crt or ${CEREMONY_DIR}/root_ca.crt"
+        echo "Retrieve both files from Root CA via Magic Wormhole first."
+        exit 1
+      fi
+
+      mkdir -p "${CONFIG_DIR}" "${CERTS_DIR}" "${SECRETS_DIR}" "${TEMPLATES_DIR}" /var/lib/step-ca/db /var/lib/step-ca/pool
+      cp "${CEREMONY_DIR}/intermediate_ca.crt" "${CERTS_DIR}/intermediate_ca.crt"
+      cp "${CEREMONY_DIR}/root_ca.crt" "${CERTS_DIR}/root_ca.crt"
+
+      ROOT_FINGERPRINT=$(step certificate fingerprint "${CERTS_DIR}/root_ca.crt")
+      echo "Root CA Fingerprint: ${ROOT_FINGERPRINT}"
+
+      if [ ! -f "${SECRETS_DIR}/admin_jwk_key" ]; then
+        echo "Generating Admin JWK provisioner key..."
+        step crypto jwk create "${SECRETS_DIR}/admin_jwk_pub.json" "${SECRETS_DIR}/admin_jwk_key" \
+          --kty EC \
+          --curve P-256 \
+          --use sig \
+          --password-file "${SECRETS_DIR}/password.txt"
+        chmod 0600 "${SECRETS_DIR}/admin_jwk_key" "${SECRETS_DIR}/admin_jwk_pub.json"
+      fi
+
+      ADMIN_JWK=$(cat "${SECRETS_DIR}/admin_jwk_pub.json")
+
+      cat <<EOF > "${CONFIG_DIR}/ca.json"
+      {
+        "root": "${CERTS_DIR}/root_ca.crt",
+        "federate": [],
+        "crt": "${CERTS_DIR}/intermediate_ca.crt",
+        "key": "${SECRETS_DIR}/intermediate_ca_key",
+        "address": ":443",
+        "dnsNames": [
+          "ica.dc.paradigm-works.com"
+        ],
+        "logger": {
+          "format": "text"
+        },
+        "db": {
+          "type": "bbolt",
+          "dataSource": "/var/lib/step-ca/db"
+        },
+        "authority": {
+          "provisioners": [
+            {
+              "type": "ACME",
+              "name": "acme",
+              "claims": {
+                "minTLSCertDuration": "1h",
+                "maxTLSCertDuration": "24h",
+                "defaultTLSCertDuration": "24h"
+              },
+              "options": {
+                "x509": {
+                  "templateFile": "${TEMPLATES_DIR}/x509-leaf.tpl"
+                }
+              }
+            },
+            {
+              "type": "JWK",
+              "name": "admin",
+              "key": ${ADMIN_JWK},
+              "encryptedKey": $(cat "${SECRETS_DIR}/admin_jwk_key"),
+              "claims": {
+                "minTLSCertDuration": "1h",
+                "maxTLSCertDuration": "8760h",
+                "defaultTLSCertDuration": "8760h"
+              },
+              "options": {
+                "x509": {
+                  "templateFile": "${TEMPLATES_DIR}/x509-leaf.tpl"
+                }
+              }
+            }
+          ]
+        },
+        "tls": {
+          "cipherSuites": [
+            "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+            "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+            "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305"
+          ],
+          "minVersion": 1.2,
+          "maxVersion": 1.3
+        }
+      }
+      EOF
+
+      chown -R step:step "${STEPPATH}" /var/lib/step-ca
+      chmod 0750 "${STEPPATH}" "${CONFIG_DIR}" "${CERTS_DIR}" "${SECRETS_DIR}" "${TEMPLATES_DIR}"
+      chmod 0644 "${CERTS_DIR}"/*.crt "${CONFIG_DIR}/ca.json" "${TEMPLATES_DIR}"/*.tpl
+      chmod 0600 "${SECRETS_DIR}"/*
+
+      systemctl daemon-reload
+      systemctl enable step-ca
+      systemctl restart step-ca
+
+      echo ""
+      echo "[OK] step-ca service started."
+      systemctl status step-ca --no-pager
+      echo ""
+      echo "Verify ACME directory endpoint:"
+      echo "  curl -k https://ica.dc.paradigm-works.com/acme/acme/directory"
+
+runcmd:
+  # Create step system user & group
+  - groupadd --system step || true
+  - useradd --system --home /etc/step-ca --shell /usr/sbin/nologin -g step step || true
+
+  # Install Smallstep repository
+  - mkdir -p /etc/apt/trusted.gpg.d
+  - curl -fsSL https://packages.smallstep.com/smallstep.gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/smallstep.gpg
+  - echo "deb [signed-by=/etc/apt/trusted.gpg.d/smallstep.gpg] https://packages.smallstep.com/debian-security/ stable main" > /etc/apt/sources.list.d/smallstep.list
+  - apt-get update
+  - apt-get install -y step-cli step-ca
+
+  # Set up directories
+  - mkdir -p /etc/step-ca/config /etc/step-ca/certs /etc/step-ca/secrets /etc/step-ca/templates /var/lib/step-ca/db /var/lib/step-ca/pool /root/ceremonies
+  - chown -R step:step /etc/step-ca /var/lib/step-ca
+  - chmod 0750 /etc/step-ca /var/lib/step-ca
+  - chmod 0700 /root/ceremonies
+
+  # Firewall rules
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow 22/tcp comment 'SSH Administration'
+  - ufw allow 80/tcp comment 'ACME HTTP-01'
+  - ufw allow 443/tcp comment 'Step-CA ACME & API'
+  - ufw --force enable

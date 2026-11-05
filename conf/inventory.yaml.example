@@ -1,0 +1,59 @@
+# ==============================================================================
+# Non-ACME Certificate Inventory Template
+# Copy this file to site-conf/<site-id>/inventory.yaml and define your targets.
+# ==============================================================================
+
+# Global defaults applied to devices unless overridden per item
+defaults:
+  duration: "8760h" # 1 year
+  key_type: "EC"    # EC or RSA
+  curve: "P-256"    # P-256, P-384, P-521 (if key_type is EC)
+  rsa_bits: 2048    # 2048, 4096 (if key_type is RSA)
+  bundle_format: "pem" # pem, crt-key-pair, or pfx
+
+devices:
+  # Example 1: Network Switch (PEM pair, SCP deployment)
+  - name: "core-switch-01"
+    common_name: "switch01.internal.example.com"
+    sans:
+      dns:
+        - "switch01.internal.example.com"
+        - "switch01"
+      ip:
+        - "10.0.0.2"
+    bundle_format: "crt-key-pair"
+    deployment:
+      method: "scp"
+      target_host: "10.0.0.2"
+      target_user: "admin"
+      cert_path: "/etc/ssl/certs/switch.crt"
+      key_path: "/etc/ssl/private/switch.key"
+      post_command: "system restart web-management"
+
+  # Example 2: TrueNAS Storage Web GUI (Fullchain PEM)
+  - name: "truenas-storage"
+    common_name: "truenas.internal.example.com"
+    sans:
+      dns:
+        - "truenas.internal.example.com"
+        - "nas.internal.example.com"
+      ip:
+        - "10.0.0.10"
+    bundle_format: "pem"
+    deployment:
+      method: "manual-pool" # Leaves certificate in pool directory for manual upload or API script
+
+  # Example 3: IPMI / iDRAC / BMC (PKCS#12 / PFX format)
+  - name: "hypervisor-01-ipmi"
+    common_name: "idrac-hv01.internal.example.com"
+    sans:
+      dns:
+        - "idrac-hv01.internal.example.com"
+      ip:
+        - "10.0.10.5"
+    key_type: "RSA"
+    rsa_bits: 2048
+    bundle_format: "pfx"
+    pfx_password: "changeit"
+    deployment:
+      method: "manual-pool"
