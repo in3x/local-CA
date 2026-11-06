@@ -20,10 +20,15 @@ This guide details what settings to configure when provisioning the Root CA and 
 
 ## 2. XCP-ng / Xen Orchestra Deployment Process
 
-### Step 1: Generate the Cloud-Init NoCloud ISOs
-Cloud-init consumes metadata and configuration via an ISO labeled `cidata`.
+### Preferred Method: Native Cloud-Init (No ISO Needed)
+Xen Orchestra has a built-in Cloud-Init / ConfigDrive injector:
+1. When creating a VM from a Cloud template, scroll to the **Cloud-init / Config drive** section.
+2. Select **Custom config**.
+3. Paste the contents of `user-data` directly into the text box.
+XO will automatically generate and attach an ephemeral config drive during first boot.
 
-On your workstation or management node:
+### Alternative Method: Generate NoCloud ISOs
+If deploying via standard VM templates without native cloud-init injection:
 ```bash
 cd /path/to/local-CA/provisioning/scripts
 
@@ -33,7 +38,7 @@ cd /path/to/local-CA/provisioning/scripts
 # Build Intermediate CA ISO
 ./build-cidata-iso.sh intermediate-ca /path/to/iso-sr/intermediate-ca-cidata.iso
 ```
-*Tip:* Place these `.iso` files inside your XCP-ng ISO Storage Repository (NFS or SMB share).
+Place these `.iso` files inside your XCP-ng ISO Storage Repository (NFS or SMB share).
 
 ---
 
@@ -43,14 +48,14 @@ cd /path/to/local-CA/provisioning/scripts
 3. **Disks:** 8–10 GB virtual disk.
 4. **Networking:**
    - **Do NOT attach any virtual network interface (VIF)**, or attach to an internal non-routed dummy network (`Host-internal management network`).
-5. **CD-ROM / Install Source:**
-   - Attach `root-ca-cidata.iso` to the virtual CD-ROM drive.
+5. **Cloud-init Configuration:**
+   - **Custom config (XO):** Paste the contents of `provisioning/cloud-init/root-ca/user-data`.
+   - **Or CD-ROM (Manual):** Attach `root-ca-cidata.iso` to the virtual CD-ROM drive.
 6. **Boot & Verify:**
    - Power on the VM.
-   - Open the **Xen Orchestra / XCP-ng Console tab**.
+   - Open the **Xen Orchestra (v6) Console tab**.
    - Cloud-init will automatically configure the system and install `step-cli`.
-   - Once cloud-init finishes (`cloud-init status --wait`), shut down the VM.
-   - Detach the `root-ca-cidata.iso` CD-ROM drive.
+   - Once cloud-init finishes (`cloud-init status --wait`), the host is ready for `/usr/local/bin/init-root-ca.sh`.
 
 ---
 
@@ -62,12 +67,12 @@ cd /path/to/local-CA/provisioning/scripts
    - Attach 1 VIF connected to your internal server network.
    - Note the MAC address and set a static DHCP reservation in your router/DNS for:
      `ica.dc.paradigm-works.com` -> `[Assigned IP]`
-5. **CD-ROM / Install Source:**
-   - Attach `intermediate-ca-cidata.iso` to the virtual CD-ROM drive.
+5. **Cloud-init Configuration:**
+   - **Custom config (XO):** Paste the contents of `provisioning/cloud-init/intermediate-ca/user-data`.
+   - **Or CD-ROM (Manual):** Attach `intermediate-ca-cidata.iso`.
 6. **Boot & Verify:**
    - Power on the VM.
    - Monitor console until cloud-init finishes: `cloud-init status --wait`.
-   - Detach the `intermediate-ca-cidata.iso` CD-ROM drive.
 
 ---
 

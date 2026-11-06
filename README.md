@@ -83,30 +83,81 @@ The agent will query you for the site parameters (site ID, organization name, do
 
 ## Quick-Start: Build and Ceremony Flow
 
-### 1. Build Cloud-Init ISOs
+### 1. Provision VMs
+
+#### Method A: Xen Orchestra Native (Recommended - No ISO needed)
+1. **Root CA VM:**
+   - In Xen Orchestra, create a VM from a cloud template (Debian 12 or Ubuntu 24.04).
+   - Resources: 1 vCPU, 1024 MB RAM, 10 GB disk.
+   - Network: **No network interface (VIF)**.
+   - Cloud-init: Select **Custom config** and paste the contents of [`provisioning/cloud-init/root-ca/user-data`](provisioning/cloud-init/root-ca/user-data).
+2. **Intermediate CA VM:**
+   - Create a VM from the same cloud template.
+   - Resources: 1–2 vCPUs, 2048 MB RAM, 15 GB disk.
+   - Network: 1 VIF connected to internal network (`ica.dc.paradigm-works.com`).
+   - Cloud-init: Select **Custom config** and paste the contents of [`provisioning/cloud-init/intermediate-ca/user-data`](provisioning/cloud-init/intermediate-ca/user-data).
+
+#### Method B: Generic / Manual Hypervisor (Using NoCloud ISOs)
+If your hypervisor does not support direct cloud-init text injection:
 ```bash
 cd provisioning/scripts
 ./build-cidata-iso.sh root-ca /path/to/iso-sr/root-ca-cidata.iso
 ./build-cidata-iso.sh intermediate-ca /path/to/iso-sr/intermediate-ca-cidata.iso
 ```
+Attach each generated `.iso` to the respective VM's CD drive before first boot.
 
-### 2. Boot VMs & Execute Signing Ceremony
-1. **Boot Root CA VM** with `root-ca-cidata.iso` attached (no network interface). Run:
-   ```bash
-   /usr/local/bin/init-root-ca.sh
-   ```
-2. **Boot Intermediate CA VM** with `intermediate-ca-cidata.iso` attached (connected to internal network). Run:
-   ```bash
-   /usr/local/bin/request-intermediate-csr.sh
-   ```
-3. **Transfer CSR to Root CA** using `wormhole send` or console paste.
-4. **Sign CSR on Root CA**:
-   ```bash
-   /usr/local/bin/sign-intermediate-csr.sh /root/ceremonies/intermediate.csr
-   ```
-5. **Transfer signed certs back to Intermediate CA** (`intermediate_ca.crt` and `root_ca.crt`).
-6. **Start Intermediate CA**:
-   ```bash
-   /usr/local/bin/bootstrap-intermediate.sh
-   ```
-7. **Shut down Root CA VM** and disconnect its virtual interface.
+---
+
+### 2. Signing Ceremony & Service Activation
+
+1. **Initialize Root CA (Air-Gapped):**
+   - In Xen Orchestra (v6) Console for `root-ca`, run:
+     ```bash
+     /usr/local/bin/init-root-ca.sh
+     ```
+   - Enter your Root CA passphrase when prompted. **Record it in your encrypted vault (Standard Notes).**
+
+2. **Generate Intermediate CSR:**
+   - In the Intermediate CA terminal/console, run:
+     ```bash
+     /usr/local/bin/request-intermediate-csr.sh
+     cat /root/ceremonies/intermediate.csr
+     ```
+   - Copy the CSR PEM text block.
+
+3. **Transfer and Sign CSR on Root CA:**
+   - In the Root CA Console (via XO 6 console paste or Magic Wormhole):
+     ```bash
+     cat << 'EOF' > /root/ceremonies/intermediate.csr
+     <paste CSR here>
+     EOF
+     /usr/local/bin/sign-intermediate-csr.sh /root/ceremonies/intermediate.csr
+     ```
+   - View the signed cert and root cert:
+     ```bash
+     cat /root/ceremonies/intermediate.crt
+     cat /etc/step-ca/certs/root_ca.crt
+     ```
+
+4. **Install Certs & Start Intermediate CA:**
+   - On the Intermediate CA, paste both certificates:
+     ```bash
+     cat << 'EOF' > /root/ceremonies/intermediate_ca.crt
+     <paste intermediate.crt here>
+     EOF
+
+     cat << 'EOF' > /root/ceremonies/root_ca.crt
+     <paste root_ca.crt here>
+     EOF
+     ```
+   - Launch and verify the service:
+     ```bash
+     /usr/local/bin/bootstrap-intermediate.sh
+     ```
+
+5. **Power Down Root CA:**
+   - In the Root CA Console, shut down the VM:
+     ```bash
+     poweroff
+     ```
+   - Keep the Root CA VM powered off until the next intermediate rotation (in 2–3 years).
