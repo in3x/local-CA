@@ -62,7 +62,12 @@ Place these `.iso` files inside your XCP-ng ISO Storage Repository (NFS or SMB s
    - Power on the VM.
    - Open the **Xen Orchestra (v6) Console tab**.
    - Cloud-init will automatically configure the system and install `step-cli`.
-   - Once cloud-init finishes (`cloud-init status --wait`), the host is ready for `/usr/local/bin/init-root-ca.sh`.
+   - Log in as **`stepadmin`** using the initial temporary password in `user-data` (`chpasswd.list`, default: `kjX:bu4pM^y*VLL3ylyLr:T0`).
+   - The first-login ceremony will generate a permanent complex passphrase:
+     - Store it in an encrypted vault or password manager.
+     - Type `captured` or `got it`.
+     - Re-type or paste the passphrase to verify capture.
+   - The host is now ready for `/usr/local/bin/init-root-ca.sh`.
 
 ---
 
@@ -79,7 +84,9 @@ Place these `.iso` files inside your XCP-ng ISO Storage Repository (NFS or SMB s
    - **Or CD-ROM (Manual):** Attach `intermediate-ca-cidata.iso`.
 6. **Boot & Verify:**
    - Power on the VM.
-   - Monitor console until cloud-init finishes: `cloud-init status --wait`.
+   - Monitor console until cloud-init finishes.
+   - Log in via Console or SSH as **`stepadmin`** using the temporary password in `user-data` (`chpasswd.list`, default: `kjX:bu4pM^y*VLL3ylyLr:T0`).
+   - Complete the first-login password ceremony (store generated password, enter `captured` or `got it`, and verify).
 
 ---
 

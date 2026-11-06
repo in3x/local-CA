@@ -77,7 +77,7 @@ If using the Zed editor agent, run the skill:
 ```
 The agent will query you for the site parameters (site ID, organization name, domain, network mode) and write the customized files directly.
 
-*Note:* `site-conf/` is git-ignored, ensuring private hostnames and infrastructure details remain strictly local.
+*Note:* `site-conf/` is git-ignored, ensuring private hostnames and infrastructure details remain strictly local. Backup is the responsibility of the local admin. 
 
 ---
 
@@ -108,14 +108,43 @@ Attach each generated `.iso` to the respective VM's CD drive before first boot.
 
 ---
 
-### 2. Signing Ceremony & Service Activation
+### 2. VM Credentials & First-Time Login Ceremony
+
+Each VM is pre-configured with a temporary single-use password:
+* **Username:** `stepadmin`
+* **Temporary Initial Password:** Located in your `user-data` file under `chpasswd.list` (default: `kjX:bu4pM^y*VLL3ylyLr:T0`).
+
+#### First-Time Login Verification
+When logging into either the XO console or SSH for the first time:
+1. The shell intercepts login and generates a unique, cryptographically random permanent passphrase:
+   ```text
+   ========================================================================
+    FIRST-TIME LOGIN SECURITY CEREMONY: STEPADMIN PASSWORD SETUP
+   ========================================================================
+
+    A new cryptographically secure permanent passphrase has been generated (XKCD/Diceware):
+
+      -->   recycling-overpay-duress-proved-371-3197   <--
+
+    INSTRUCTIONS:
+    1. Copy and store this password in an encrypted vault or password manager.
+    2. Type 'captured' or 'got it' when you have safely saved it.
+   ========================================================================
+   ```
+2. Type `captured` or `got it` once saved in your password manager.
+3. You will be prompted to re-enter/paste the permanent passphrase to prove capture.
+4. Once verified, the password is permanently applied to `stepadmin` and shell access is unlocked.
+
+---
+
+### 3. Signing Ceremony & Service Activation
 
 1. **Initialize Root CA (Air-Gapped):**
    - In Xen Orchestra (v6) Console for `root-ca`, run:
      ```bash
      /usr/local/bin/init-root-ca.sh
      ```
-   - Enter your Root CA passphrase when prompted. **Record it in your encrypted vault (Standard Notes).**
+   - Enter your Root CA passphrase when prompted. **Record it in your encrypted vault or password manager.**
 
 2. **Generate Intermediate CSR:**
    - In the Intermediate CA terminal/console, run:
@@ -126,7 +155,7 @@ Attach each generated `.iso` to the respective VM's CD drive before first boot.
    - Copy the CSR PEM text block.
 
 3. **Transfer and Sign CSR on Root CA:**
-   - In the Root CA Console (via XO 6 console paste or Magic Wormhole):
+   - In the Root CA Console (via XO 6 console paste or after temporarily enabling network access use Magic Wormhole):
      ```bash
      cat << 'EOF' > /root/ceremonies/intermediate.csr
      <paste CSR here>

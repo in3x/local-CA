@@ -30,8 +30,8 @@ The primary security objectives of this architecture are:
 ### 3.1 Root CA Passphrase
 * **Strict Prohibition:** Never write or store the Root CA passphrase on disk in plaintext or automated script variables.
 * **Storage Location:** 
-  - Generated as a 24+ character high-entropy passphrase or Diceware passphrase.
-  - Stored inside an encrypted vault (e.g., encrypted page in **Standard Notes**).
+  - Generated as a 4- or 5-word XKCD/Diceware passphrase with numeric suffix.
+  - Stored inside an encrypted vault or password manager.
   - An emergency physical paper copy stored in a secure physical location (safe or lockbox) alongside any cold storage media.
 * **Usage:** Entered interactively at the console terminal only during signing ceremonies.
 
@@ -40,8 +40,45 @@ The primary security objectives of this architecture are:
 * **Storage Location:**
   - Placed at `/etc/step-ca/password.txt` on the Intermediate VM.
   - Strict POSIX file permissions: `chmod 0600`, owned by `step:step` (the unprivileged system user running `step-ca`).
-  - Archived in encrypted Standard Notes for disaster recovery reference.
+  - Archived in an encrypted vault or password manager for disaster recovery reference.
 * **Isolation:** The intermediate password file decrypts **only** the intermediate key. It has zero cryptographic relationship with the root CA.
+
+### 3.3 Passphrase Model, Cognitive Chunking & Security Ceremonies
+Administrative logins and cryptographic key generation across both VMs employ an XKCD-style / Diceware passphrase model with cognitive chunking:
+
+* **Wordlist Source:** EFF Large Wordlist (7,776 words, $6^5$ combinations), pre-installed offline at `/usr/local/share/dict/eff-words.txt`. The list is curated for clarity, distinctness, and absence of confusing homophones or ambiguous terms.
+* **Cognitive Chunking (Miller's Law):**
+  - Human working memory processes information most reliably in small groups ("chunks") of 3 to 4 items.
+  - While raw 7-digit strings (e.g. `2347731`) cause cognitive fatigue and transcription errors, chunking the digits in local telephone format (`234-7731`) compresses 7 discrete digits into two familiar phonetic blocks ("two-thirty-four, seventy-seven thirty-one").
+  - Combined with 4 dictionary words, the full passphrase has a natural spoken cadence:
+    ```
+    recycling-overpay-duress-proved-371-3197
+    ```
+* **Configuration Parameters:**
+  - `PASSPHRASE_WORDS`: Number of random words from the EFF Large List (minimum 4, default: `4`).
+  - `PASSPHRASE_DIGITS`: Number of trailing random digits (minimum 4, default: `7`). When set to 7, digits automatically format as `XXX-XXXX`.
+* **Entropy Analysis:**
+  - **4 Words + 7 Chunked Digits (Default):**
+    - Word space: $7,776^4 \approx 3.65 \times 10^{15} \approx 51.70\text{ bits}$
+    - 7-digit suffix ($10^7 = 10,000,000$ combinations): $\approx 23.25\text{ bits}$
+    - Total Entropy: $\approx \mathbf{74.95\text{ bits}}$ ($\approx 3.65 \times 10^{22}$ combinations).
+    - Achieves cold-storage grade security equivalent to a 13-character random alphanumeric string, while remaining natural to read, memorize, and transcribe without errors.
+  - **4 Words + 4 Digits (Compact):**
+    - Word space: $7,776^4 \approx 51.70\text{ bits}$
+    - 4-digit suffix ($10^4 = 10,000$ combinations): $\approx 13.29\text{ bits}$
+    - Total Entropy: $\approx \mathbf{64.99\text{ bits}}$ ($\approx 3.65 \times 10^{19}$ combinations).
+  - **5 Words + 7 Chunked Digits (High-Paranoia Option):**
+    - Total Entropy: $\approx \mathbf{87.84\text{ bits}}$ ($\approx 2.84 \times 10^{26}$ combinations).
+* **Proof-of-Capture Enforcement:**
+  - Used for both initial VM login (`/etc/profile.d/99-first-login-ceremony.sh`), Root CA key generation (`init-root-ca.sh`), and Intermediate CA daemon password generation (`request-intermediate.sh`).
+  - Requires the administrator to type `captured` or `got it` after storing the phrase in their password manager.
+  - Requires re-typing/pasting the exact passphrase to verify capture before proceeding.
+* **Console Resilience:**
+  - Eliminates character ambiguity common in hypervisor remote consoles (such as `1`, `l`, `I`, `|`, `0`, `O`, `8`, `B`, and keyboard layout mapping shifts for symbols like `~`, `@`, `#`).
+  - Safe and error-resistant for emergency physical paper backup in a secure vault.
+* **Enforced Uniform Randomness:**
+  - Humans are strictly prevented from choosing weak or predictable words.
+  - Scripts draw entropy from `/dev/urandom` and `shuf` to guarantee an unskewed cryptographic distribution.
 
 ---
 

@@ -1,8 +1,0 @@
-# Non-ACME Device Inventory for Paradigm Works Datacenter (pw-dc)
-defaults:
-  duration: "8760h"
-  key_type: "EC"
-  curve: "P-256"
-  bundle_format: "pem"
-
-devices: []

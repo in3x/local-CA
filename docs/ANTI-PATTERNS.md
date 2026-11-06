@@ -33,7 +33,7 @@ Creating a `root-password.txt` file inside the Root CA VM or embedding the passp
 - Storing the passphrase on disk means anyone with temporary hypervisor access, backup access, or physical drive access can mount the VDI/qcow2 image offline and sign fraudulent intermediate certificates without knowledge of any credentials.
 
 ### The Approved Alternative
-The Root CA passphrase must never touch persistent storage. It is stored in an encrypted vault (e.g., Standard Notes) and entered interactively by an administrator at the console during signing operations.
+The Root CA passphrase must never touch persistent storage. It is stored in an encrypted vault or password manager and entered interactively by an administrator at the console during signing operations.
 
 ---
 
@@ -76,3 +76,18 @@ Leaving the Root CA VM running continuously with a network interface, protected 
 
 ### The Approved Alternative
 The Root CA VM has **no persistent virtual network interface attached** (or remains in a detached `dummy` bridge) and is kept in a **powered-down state** 99.9% of the time.
+
+---
+
+## Anti-Pattern 6: Managing or Rotating a Persistent Default Bootstrap Password
+
+### The Rejected Proposal
+Creating a persistent "site default password" rotation policy or vault entry to maintain a reusable default bootstrap password in case an Intermediate CA VM ever needs to be rebuilt or regenerated.
+
+### Why It Was Rejected
+- **Transitory Lifecycle:** The bootstrap temporary password exists for only a single brief window: the few seconds between the VM's first boot and the administrator's initial login.
+- **Immediate Invalidation:** The first-login security ceremony forcibly overrides the temporary password with a newly generated, verified permanent passphrase before granting shell access.
+- **Natural Roll on Rebuild:** When an Intermediate CA VM is destroyed and rebuilt from scratch, a brand-new unique temporary bootstrap password and fresh certificate signing keys are minted dynamically. There is zero operational need or security benefit in maintaining, tracking, or rotating a persistent default password.
+
+### The Approved Alternative
+Generate a unique, single-use bootstrap password dynamically per site configuration at scaffold time, enforce the "capture and echo back" verification ceremony during site setup, and allow it to be permanently rolled on first boot.
