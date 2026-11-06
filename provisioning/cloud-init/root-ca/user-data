@@ -24,6 +24,7 @@ packages:
   - magic-wormhole
   - qemu-guest-agent
   - ufw
+  - xe-guest-utilities
 
 write_files:
   - path: /etc/sysctl.d/99-disable-ipv6.conf

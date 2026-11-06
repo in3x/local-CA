@@ -24,8 +24,36 @@ packages:
   - magic-wormhole
   - qemu-guest-agent
   - ufw
+  - xe-guest-utilities
+  - unattended-upgrades
 
 write_files:
+  - path: /etc/apt/apt.conf.d/20auto-upgrades
+    permissions: "0644"
+    owner: root:root
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+      APT::Periodic::AutocleanInterval "7";
+
+  - path: /etc/apt/apt.conf.d/50unattended-upgrades
+    permissions: "0644"
+    owner: root:root
+    content: |
+      Unattended-Upgrade::Allowed-Origins {
+          "${distro_id}:${distro_codename}-security";
+          "${distro_id}ESMApps:${distro_codename}-apps-security";
+          "${distro_id}ESM:${distro_codename}-infra-security";
+      };
+      Unattended-Upgrade::Package-Blacklist {
+      };
+      Unattended-Upgrade::AutoFixInterruptedDpkg "true";
+      Unattended-Upgrade::MinimalSteps "true";
+      Unattended-Upgrade::InstallOnShutdown "false";
+      Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+      Unattended-Upgrade::Remove-New-Unused-Dependencies "true";
+      Unattended-Upgrade::Automatic-Reboot "false";
+
   - path: /etc/systemd/system/step-ca.service
     permissions: "0644"
     owner: root:root
@@ -272,3 +300,6 @@ runcmd:
   - ufw allow 80/tcp comment 'ACME HTTP-01'
   - ufw allow 443/tcp comment 'Step-CA ACME & API'
   - ufw --force enable
+
+  # Enable automatic security updates
+  - systemctl enable --now unattended-upgrades

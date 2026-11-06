@@ -60,12 +60,14 @@ Key design objectives:
   - Dedicated stopped VM on TrueNAS/XCP-ng with no active network bridge.
   - Or container/WSL2 run from an air-gapped encrypted USB flash drive.
 - **Validity:** 10 to 20 years.
+- **Maintenance Policy:** Immutable appliance. No automated OS updates. `xe-guest-utilities` provides hypervisor telemetry during rare boot cycles.
 
 ### 3.2 Intermediate CA
 - **Hostname:** `ica.dc.paradigm-works.com`
 - **Role:** Online issuing authority for internal network endpoints.
 - **State:** Continuously running under systemd supervision (`step-ca.service`).
 - **Storage/DB:** Local embedded key-value store (`bbolt`), minimal footprint (< 20 MB).
+- **Maintenance Policy:** `unattended-upgrades` applies automatic distribution security patches. `xe-guest-utilities` provides XCP-ng agent integration.
 - **Ports Exposed:**
   - `443/TCP`: Step-CA ACME directory and REST API.
   - `80/TCP`: HTTP-01 challenge verification.

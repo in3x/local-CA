@@ -15,6 +15,8 @@ This guide details what settings to configure when provisioning the Root CA and 
 | **Cloud-Init Source** | Optional / generic | Attached `root-ca-cidata.iso` on first boot | Attached `intermediate-ca-cidata.iso` on first boot |
 | **Hypervisor Backups** | Nightly snapshot / VDI export | **Manual cold export only** (Encrypted) | Stateless rebuild strategy (No restore needed) |
 | **Console Access** | SSH or hypervisor console | **Hypervisor Console Only** (SSH disabled) | SSH (port 22) + Web ports (80, 443) |
+| **Guest Tools / Agent** | ISO install or repo package | `xe-guest-utilities` (via APT) | `xe-guest-utilities` (via APT) |
+| **OS Patching / Updates** | Manual or scheduled | **Static / Frozen** (No automatic updates) | Automated security patches (`unattended-upgrades`) |
 
 ---
 
@@ -26,6 +28,11 @@ Xen Orchestra has a built-in Cloud-Init / ConfigDrive injector:
 2. Select **Custom config**.
 3. Paste the contents of `user-data` directly into the text box.
 XO will automatically generate and attach an ephemeral config drive during first boot.
+
+> **Note on Guest Agent & Updates:**
+> - Both VMs install the native **`xe-guest-utilities`** package via APT. Do **not** attach the old XCP-ng guest tools ISO.
+> - The Intermediate CA configures **`unattended-upgrades`** for automatic security patching.
+> - The Root CA is kept frozen/immutable and receives no automated updates while powered down.
 
 ### Alternative Method: Generate NoCloud ISOs
 If deploying via standard VM templates without native cloud-init injection:

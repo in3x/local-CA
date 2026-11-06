@@ -91,3 +91,17 @@ If the Intermediate CA host is compromised:
 5. Boot the new Intermediate CA.
 6. Trigger forced renewal on critical services.
 7. Any rogue certificates issued by the compromised Intermediate CA expire automatically within 24 hours (ACME) or must be blacklisted in application-level pin configurations.
+
+---
+
+## 7. Patching & Guest Agent Security
+
+* **Root CA (Frozen Appliance):**
+  - Receives no automatic updates. Because the VM is air-gapped and powered off, guest vulnerability exposure is non-existent.
+  - Retaining a frozen environment avoids unexpected breakage of crypto toolchains or bootloaders.
+* **Intermediate CA (Automated Security Updates):**
+  - Exposed to internal network traffic (ports 80 and 443).
+  - Managed by `unattended-upgrades` to automatically install critical OS and security fixes without manual intervention.
+* **Hypervisor Integration (`xe-guest-utilities`):**
+  - Installed strictly from the distribution's verified APT repository.
+  - Eliminates the need to mount untrusted guest tools ISOs or compile out-of-tree kernel modules.
