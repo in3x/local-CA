@@ -1,0 +1,50 @@
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  liburing2
+The following packages will be REMOVED:
+  xen-guest-agent
+The following NEW packages will be installed:
+  liburing2 qemu-guest-agent xe-guest-utilities
+0 upgraded, 3 newly installed, 1 to remove and 284 not upgraded.
+Need to get 1178 kB of archives.
+After this operation, 523 kB disk space will be freed.
+Get:1 http://archive.ubuntu.com/ubuntu noble/main amd64 liburing2 amd64 2.5-1build1 [21.1 kB]
+Get:2 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 qemu-guest-agent amd64 1:8.2.2+ds-0ubuntu1.18 [391 kB]
+Get:3 http://archive.ubuntu.com/ubuntu noble/universe amd64 xe-guest-utilities amd64 7.20.2-0ubuntu1 [765 kB]
+Fetched 1178 kB in 1s (1513 kB/s)
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 74703 files and directories currently installed.)
+Removing xen-guest-agent (0.4.0) ...
+Selecting previously unselected package liburing2:amd64.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 74691 files and directories currently installed.)
+Preparing to unpack .../liburing2_2.5-1build1_amd64.deb ...
+Unpacking liburing2:amd64 (2.5-1build1) ...
+Selecting previously unselected package qemu-guest-agent.
+Preparing to unpack .../qemu-guest-agent_1%3a8.2.2+ds-0ubuntu1.18_amd64.deb ...
+Unpacking qemu-guest-agent (1:8.2.2+ds-0ubuntu1.18) ...
+Selecting previously unselected package xe-guest-utilities.
+Preparing to unpack .../xe-guest-utilities_7.20.2-0ubuntu1_amd64.deb ...
+Unpacking xe-guest-utilities (7.20.2-0ubuntu1) ...
+Setting up liburing2:amd64 (2.5-1build1) ...
+Setting up xe-guest-utilities (7.20.2-0ubuntu1) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/xe-daemon.service → /usr/lib/systemd/system/xe-daemon.service.
+Setting up qemu-guest-agent (1:8.2.2+ds-0ubuntu1.18) ...
+qemu-guest-agent.service is a disabled or a static unit, not starting it.
+Processing triggers for libc-bin (2.39-0ubuntu8.4) ...
+Processing triggers for man-db (2.12.0-4build2) ...
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+/var/lib/cloud/instance/scripts/runcmd: 6: Bad substitution
+2026-11-06 23:40:59,845 - cc_scripts_user.py[WARNING]: Failed to run module scripts_user (scripts in /var/lib/cloud/instance/scripts)
+2026-11-06 23:40:59,845 - log_util.py[WARNING]: Running module scripts_user (<module 'cloudinit.config.cc_scripts_user' from '/usr/lib/python3/dist-packages/cloudinit/config/cc_scripts_user.py'>) failed
+Cloud-init v. 24.4.1-0ubuntu0~24.04.2 finished at Fri, 06 Nov 2026 23:40:59 +0000. Datasource DataSourceNoCloud [seed=/dev/xvdb].  Up 27.82 seconds
