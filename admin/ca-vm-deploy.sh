@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Load shared dev-bootstrap library
+DEV_BOOTSTRAP_LIB="${HOME}/.local/lib/dev-bootstrap"
+if [[ ! -f "$DEV_BOOTSTRAP_LIB/lib-site.sh" ]]; then
+  echo "[-] Error: Shared platform library not found at $DEV_BOOTSTRAP_LIB" >&2
+  echo "    Please run the host bootstrap to install it:" >&2
+  echo "      bash ~/Projects/zed-standards/admin/host-bootstrap.sh --lib-only" >&2
+  exit 1
+fi
+source "$DEV_BOOTSTRAP_LIB/lib-site.sh"
+
 # Deploys a VM on XCP-ng via the Xen Orchestra REST API with Cloud-Init injection.
 # Usage:
 #   ./deploy-xo-vm.sh <site-name> --list                           # Tests connection & lists templates, SRs, networks

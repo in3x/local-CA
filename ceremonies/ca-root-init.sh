@@ -7,11 +7,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# Load shared dev-bootstrap library if available
+# Load shared dev-bootstrap library
 DEV_BOOTSTRAP_LIB="${HOME}/.local/lib/dev-bootstrap"
-if [[ -f "$DEV_BOOTSTRAP_LIB/lib-secret.sh" ]]; then
-  source "$DEV_BOOTSTRAP_LIB/lib-secret.sh"
+if [[ ! -f "$DEV_BOOTSTRAP_LIB/lib-secret.sh" ]]; then
+  echo "[-] Error: Shared platform library not found at $DEV_BOOTSTRAP_LIB" >&2
+  echo "    Please run the host bootstrap to install it:" >&2
+  echo "      bash ~/Projects/zed-standards/admin/host-bootstrap.sh --lib-only" >&2
+  exit 1
 fi
+source "$DEV_BOOTSTRAP_LIB/lib-secret.sh"
 
 STEPPATH="${STEPPATH:-/etc/step-ca}"
 CERTS_DIR="${STEPPATH}/certs"
@@ -30,73 +34,9 @@ if [ -f "${CERTS_DIR}/root_ca.crt" ]; then
   exit 1
 fi
 
-PASSPHRASE_WORDS="${PASSPHRASE_WORDS:-4}"
-PASSPHRASE_DIGITS="${PASSPHRASE_DIGITS:-7}"
-WORD_LIST="${WORD_LIST:-/usr/local/share/dict/eff-words.txt}"
-
-[ "${PASSPHRASE_WORDS}" -lt 4 ] 2>/dev/null && PASSPHRASE_WORDS=4
-[ "${PASSPHRASE_DIGITS}" -lt 4 ] 2>/dev/null && PASSPHRASE_DIGITS=4
-
-if [ ! -f "${WORD_LIST}" ] && [ -f "${SCRIPT_DIR:-.}/../wordlists/eff-large-words.txt" ]; then
-  WORD_LIST="${REPO_ROOT}/provisioning/wordlists/eff-large-words.txt"
-fi
-
-if [ -f "${WORD_LIST}" ] && command -v shuf &>/dev/null; then
-  WORDS=$(shuf -n "${PASSPHRASE_WORDS}" "${WORD_LIST}" | tr '\n' '-' | sed 's/-$//')
-  RAW_DIGITS=$(LC_ALL=C tr -dc '0-9' </dev/urandom | head -c "${PASSPHRASE_DIGITS}")
-  if [ "${PASSPHRASE_DIGITS}" -eq 7 ]; then
-    FORMATTED_DIGITS="${RAW_DIGITS:0:3}-${RAW_DIGITS:3:4}"
-  else
-    FORMATTED_DIGITS="${RAW_DIGITS}"
-  fi
-  SUGGESTED_PW="${WORDS}-${FORMATTED_DIGITS}"
-else
-  SUGGESTED_PW=$(LC_ALL=C tr -dc 'A-Za-z0-9!#$%*+,-.:=?@^_' </dev/urandom | head -c 26)
-fi
-
-while true; do
-  echo ""
-  echo "========================================================================"
-  echo " ROOT CA PRIVATE KEY PASSPHRASE CEREMONY"
-  echo "========================================================================"
-  echo ""
-  echo " A cryptographically secure Master Root Passphrase has been generated:"
-  echo ""
-  echo "   -->   ${SUGGESTED_PW}   <--"
-  echo ""
-  echo " INSTRUCTIONS:"
-  echo " 1. Copy and store this passphrase in an encrypted vault or password manager."
-  echo " 2. (Optional) Write an emergency physical paper copy for cold safe storage."
-  echo " 3. Type 'captured' or 'got it' when you have safely saved it."
-  echo "========================================================================"
-  echo ""
-  read -r -p "Confirmation: " confirm_input
-
-  shopt -s nocasematch
-  if [[ "${confirm_input}" == "captured" || "${confirm_input}" == "got it" ]]; then
-    shopt -u nocasematch
-    echo ""
-    echo "Proof of capture required:"
-    echo "Please re-type or paste the Master Root Passphrase to verify:"
-    read -r -s -p "Verify Passphrase: " verify_input
-    echo ""
-
-    if [ "${verify_input}" == "${SUGGESTED_PW}" ]; then
-      echo ""
-      echo "[OK] Master Root Passphrase verified. Creating Root CA..."
-      break
-    else
-      echo ""
-      echo "ERROR: Passphrase does not match! Press Enter to try again."
-      read -r
-    fi
-  else
-    shopt -u nocasematch
-    echo ""
-    echo "You must enter 'captured' or 'got it' to proceed. Press Enter to retry."
-    read -r
-  fi
-done
+WORD_LIST="${WORD_LIST:-${REPO_ROOT}/provisioning/wordlists/eff-large-words.txt}"
+SUGGESTED_PW="$(generate_diceware_passphrase "${PASSPHRASE_WORDS:-4}" "${PASSPHRASE_DIGITS:-7}" "${WORD_LIST}")"
+proof_of_capture_ceremony "${SUGGESTED_PW}" "Master Root Passphrase"
 
 TEMP_PW_FILE=$(mktemp)
 echo -n "${SUGGESTED_PW}" > "${TEMP_PW_FILE}"

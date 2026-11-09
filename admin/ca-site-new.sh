@@ -12,11 +12,15 @@ CONF_DIR="${REPO_ROOT}/conf"
 SITE_CONF_DIR="${REPO_ROOT}/site-conf"
 WORD_LIST="${REPO_ROOT}/provisioning/wordlists/eff-large-words.txt"
 
-# Load shared dev-bootstrap library if available
+# Load shared dev-bootstrap library
 DEV_BOOTSTRAP_LIB="${HOME}/.local/lib/dev-bootstrap"
-if [[ -f "$DEV_BOOTSTRAP_LIB/lib-secret.sh" ]]; then
-  source "$DEV_BOOTSTRAP_LIB/lib-secret.sh"
+if [[ ! -f "$DEV_BOOTSTRAP_LIB/lib-secret.sh" ]]; then
+  echo "[-] Error: Shared platform library not found at $DEV_BOOTSTRAP_LIB" >&2
+  echo "    Please run the host bootstrap to install it:" >&2
+  echo "      bash ~/Projects/zed-standards/admin/host-bootstrap.sh --lib-only" >&2
+  exit 1
 fi
+source "$DEV_BOOTSTRAP_LIB/lib-secret.sh"
 
 SITE_ID="${1:-}"
 DOMAIN="${2:-}"
@@ -47,63 +51,9 @@ echo "========================================================="
 echo " Scaffolding Site Profile: ${SITE_ID}"
 echo "========================================================="
 
-# 1. Generate unique initial temporary bootstrap password with 4 words + 7 chunked digits
-PASSPHRASE_WORDS=4
-PASSPHRASE_DIGITS=7
-
-if [ -f "${WORD_LIST}" ] && command -v shuf &>/dev/null; then
-  WORDS=$(shuf -n "${PASSPHRASE_WORDS}" "${WORD_LIST}" | tr '\n' '-' | sed 's/-$//')
-  RAW_DIGITS=$(LC_ALL=C tr -dc '0-9' </dev/urandom | head -c "${PASSPHRASE_DIGITS}")
-  FORMATTED_DIGITS="${RAW_DIGITS:0:3}-${RAW_DIGITS:3:4}"
-  INIT_TEMP_PW="${WORDS}-${FORMATTED_DIGITS}"
-else
-  INIT_TEMP_PW=$(LC_ALL=C tr -dc 'A-Za-z0-9!#$%*+,-.:=?@^_' </dev/urandom | head -c 26)
-fi
-
-# 2. Interactive Proof-of-Capture Ceremony
-while true; do
-  echo ""
-  echo "========================================================================"
-  echo " SITE SETUP: INITIAL TEMPORARY BOOTSTRAP PASSWORD CEREMONY"
-  echo "========================================================================"
-  echo ""
-  echo " A unique initial temporary password has been generated for site '${SITE_ID}':"
-  echo ""
-  echo "   -->   ${INIT_TEMP_PW}   <--"
-  echo ""
-  echo " INSTRUCTIONS:"
-  echo " 1. Copy and store this password in an encrypted vault or password manager."
-  echo "    (You will need it to log in the very first time as 'stepadmin'.)"
-  echo " 2. Type 'captured' or 'got it' when you have safely saved it."
-  echo "========================================================================"
-  echo ""
-  read -r -p "Confirmation: " confirm_input
-
-  shopt -s nocasematch
-  if [[ "${confirm_input}" == "captured" || "${confirm_input}" == "got it" ]]; then
-    shopt -u nocasematch
-    echo ""
-    echo "Proof of capture required:"
-    echo "Please re-type or paste the initial temporary password to verify:"
-    read -r -s -p "Verify Password: " verify_input
-    echo ""
-
-    if [ "${verify_input}" == "${INIT_TEMP_PW}" ]; then
-      echo ""
-      echo "[OK] Initial temporary password verified."
-      break
-    else
-      echo ""
-      echo "ERROR: Password does not match! Press Enter to try again."
-      read -r
-    fi
-  else
-    shopt -u nocasematch
-    echo ""
-    echo "You must enter 'captured' or 'got it' to proceed. Press Enter to retry."
-    read -r
-  fi
-done
+# 1. Generate unique initial temporary bootstrap password & run ceremony
+INIT_TEMP_PW="$(generate_diceware_passphrase 4 7 "${WORD_LIST}")"
+proof_of_capture_ceremony "${INIT_TEMP_PW}" "Site '${SITE_ID}' Initial Temporary Password"
 
 mkdir -p "${TARGET_DIR}/generated"
 
