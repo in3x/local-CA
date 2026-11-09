@@ -8,7 +8,7 @@ TARGET="${1:-}"
 OUTPUT_PATH="${2:-}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLOUD_INIT_DIR="${SCRIPT_DIR}/../cloud-init"
+CLOUD_INIT_DIR="${SCRIPT_DIR}/../provisioning/cloud-init"
 
 if [ -z "${TARGET}" ] || [ ! -d "${CLOUD_INIT_DIR}/${TARGET}" ]; then
   echo "Usage: $0 <root-ca|intermediate-ca> [output.iso]"
@@ -19,7 +19,7 @@ fi
 
 SOURCE_DIR="${CLOUD_INIT_DIR}/${TARGET}"
 if [ -z "${OUTPUT_PATH}" ]; then
-  OUTPUT_PATH="${SCRIPT_DIR}/../../build/${TARGET}-cidata.iso"
+  OUTPUT_PATH="${SCRIPT_DIR}/../build/${TARGET}-cidata.iso"
 fi
 
 mkdir -p "$(dirname "${OUTPUT_PATH}")"

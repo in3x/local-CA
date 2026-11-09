@@ -37,7 +37,7 @@ XO will automatically generate and attach an ephemeral config drive during first
 ### Alternative Method: Generate NoCloud ISOs
 If deploying via standard VM templates without native cloud-init injection:
 ```bash
-cd /path/to/local-CA/provisioning/scripts
+cd /path/to/local-CA/admin
 
 # Build Root CA ISO
 ./build-cidata-iso.sh root-ca /path/to/iso-sr/root-ca-cidata.iso

@@ -8,7 +8,7 @@ set -euo pipefail
 #   ./deploy-xo-vm.sh <site-name> <vm-name> [path-to-user-data]    # Deploys custom VM with specified user-data
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SITE_CONF_DIR="${REPO_ROOT}/site-conf"
 DEFAULT_PROTOTYPE_USERDATA="${REPO_ROOT}/prototypes/dynamic-console-login/user-data"
 
@@ -28,7 +28,7 @@ list_sites() {
     fi
   done
   if [ "${found}" -eq 0 ]; then
-    echo "  (no sites found - create one with: ./provisioning/scripts/new-site.sh <site-id>)"
+    echo "  (no sites found - create one with: ./admin/ca-site-new.sh <site-id>)"
   fi
 }
 

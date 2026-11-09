@@ -5,7 +5,7 @@ set -euo pipefail
 # Usage: ./render-cloud-init.sh <site-id>
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SITE_CONF_DIR="${REPO_ROOT}/site-conf"
 CLOUD_INIT_DIR="${REPO_ROOT}/provisioning/cloud-init"
 

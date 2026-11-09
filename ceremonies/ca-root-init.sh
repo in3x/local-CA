@@ -4,6 +4,15 @@ set -euo pipefail
 # Standalone Root CA Initialization Script
 # Can be run directly on a dedicated Root CA VM, or inside WSL2 / local workstation.
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Load shared dev-bootstrap library if available
+DEV_BOOTSTRAP_LIB="${HOME}/.local/lib/dev-bootstrap"
+if [[ -f "$DEV_BOOTSTRAP_LIB/lib-secret.sh" ]]; then
+  source "$DEV_BOOTSTRAP_LIB/lib-secret.sh"
+fi
+
 STEPPATH="${STEPPATH:-/etc/step-ca}"
 CERTS_DIR="${STEPPATH}/certs"
 SECRETS_DIR="${STEPPATH}/secrets"
@@ -29,7 +38,7 @@ WORD_LIST="${WORD_LIST:-/usr/local/share/dict/eff-words.txt}"
 [ "${PASSPHRASE_DIGITS}" -lt 4 ] 2>/dev/null && PASSPHRASE_DIGITS=4
 
 if [ ! -f "${WORD_LIST}" ] && [ -f "${SCRIPT_DIR:-.}/../wordlists/eff-large-words.txt" ]; then
-  WORD_LIST="${SCRIPT_DIR:-.}/../wordlists/eff-large-words.txt"
+  WORD_LIST="${REPO_ROOT}/provisioning/wordlists/eff-large-words.txt"
 fi
 
 if [ -f "${WORD_LIST}" ] && command -v shuf &>/dev/null; then

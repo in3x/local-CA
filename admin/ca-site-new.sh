@@ -7,10 +7,16 @@ set -euo pipefail
 # Usage: ./new-site.sh <site-id> [domain] [organization]
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 CONF_DIR="${REPO_ROOT}/conf"
 SITE_CONF_DIR="${REPO_ROOT}/site-conf"
 WORD_LIST="${REPO_ROOT}/provisioning/wordlists/eff-large-words.txt"
+
+# Load shared dev-bootstrap library if available
+DEV_BOOTSTRAP_LIB="${HOME}/.local/lib/dev-bootstrap"
+if [[ -f "$DEV_BOOTSTRAP_LIB/lib-secret.sh" ]]; then
+  source "$DEV_BOOTSTRAP_LIB/lib-secret.sh"
+fi
 
 SITE_ID="${1:-}"
 DOMAIN="${2:-}"
@@ -130,7 +136,7 @@ if [ -f "${CONF_DIR}/inventory.yaml.example" ]; then
 fi
 
 # 5. Render customized cloud-init manifests for this site
-"${SCRIPT_DIR}/render-cloud-init.sh" "${SITE_ID}"
+"${SCRIPT_DIR}/ca-manifest-render.sh" "${SITE_ID}"
 
 # 6. Source final site.env to display summary
 # shellcheck source=/dev/null

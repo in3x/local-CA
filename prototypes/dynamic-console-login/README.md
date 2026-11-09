@@ -49,14 +49,14 @@ This prototype is a self-contained testbed designed to validate the **dynamic on
 2. **Discover Templates & SRs:**
    Run the list helper for your site (uses `curl -k` to handle self-signed certificates):
    ```bash
-   ./provisioning/scripts/deploy-xo-vm.sh pw-dc --list
+   ./admin/ca-vm-deploy.sh pw-dc --list
    ```
-   *(If you run `./provisioning/scripts/deploy-xo-vm.sh` with no arguments, it lists all available site names).*
+   *(If you run `./admin/ca-vm-deploy.sh` with no arguments, it lists all available site names).*
    Find your cloud template name (e.g. `Ubuntu Noble 24.04 Cloud`) and set `XO_TEMPLATE` in `site-conf/pw-dc/xo.env`.
 
 3. **Deploy the Prototype VM:**
    ```bash
-   ./provisioning/scripts/deploy-xo-vm.sh pw-dc
+   ./admin/ca-vm-deploy.sh pw-dc
    ```
    The script creates `test-console-auth`, injects the prototype's `user-data`, and boots it automatically!
 

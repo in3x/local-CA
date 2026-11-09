@@ -62,7 +62,7 @@ Read `conf/site.env.example` and `conf/inventory.yaml.example` as baselines.
 
 2. Create `site-conf/<SITE_ID>/inventory.yaml` initialized with the default template and empty `devices: []` list (or prepopulate any non-ACME devices the user mentioned).
 
-3. Run `./provisioning/scripts/render-cloud-init.sh <SITE_ID>` to generate:
+3. Run `./admin/ca-manifest-render.sh <SITE_ID>` to generate:
    - `site-conf/<SITE_ID>/generated/root-user-data.yaml`
    - `site-conf/<SITE_ID>/generated/intermediate-user-data.yaml`
 

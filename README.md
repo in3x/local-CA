@@ -63,10 +63,10 @@ You can initialize a new site profile (`site-conf/<site-id>/`) using either meth
 
 ### Option A: Shell Script (Belt)
 ```bash
-./provisioning/scripts/new-site.sh <site-id> [domain] [organization]
+./admin/ca-site-new.sh <site-id> [domain] [organization]
 
 # Example:
-./provisioning/scripts/new-site.sh pw-dc dc.paradigm-works.com "Paradigm Works"
+./admin/ca-site-new.sh pw-dc dc.paradigm-works.com "Paradigm Works"
 ```
 This copies `conf/site.env.example` and `conf/inventory.yaml.example` into `site-conf/pw-dc/` and substitutes your site parameters.
 
@@ -100,7 +100,7 @@ The agent will query you for the site parameters (site ID, organization name, do
 #### Method B: Generic / Manual Hypervisor (Using NoCloud ISOs)
 If your hypervisor does not support direct cloud-init text injection:
 ```bash
-cd provisioning/scripts
+# Scripts organized in admin/ and ceremonies/
 ./build-cidata-iso.sh root-ca /path/to/iso-sr/root-ca-cidata.iso
 ./build-cidata-iso.sh intermediate-ca /path/to/iso-sr/intermediate-ca-cidata.iso
 ```
