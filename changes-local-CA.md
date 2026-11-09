@@ -14,7 +14,7 @@ Because scripts in this repository execute in **three distinct environments**, t
 local-CA/
 ├── admin/                         # Context 1: Workstation Management & Hypervisor Operations
 │   ├── ca-site-new.sh             # Scaffolds new site profile & passwords (was new-site.sh)
-│   ├── ca-vm-deploy.sh            # Talks to Xen Orchestra REST API & deploys VMs (was deploy-xo-vm.sh)
+│   ├── ca-vm-deploy.sh            # Deploys VMs via Xen Orchestra xo-cli (was deploy-xo-vm.sh)
 │   ├── ca-iso-build.sh            # Builds NoCloud cidata ISO for manual installs (was build-cidata-iso.sh)
 │   └── ca-manifest-render.sh      # Renders customized site Cloud-Init manifests (was render-cloud-init.sh)
 │
@@ -46,7 +46,9 @@ local-CA/
 | **Agent Context** | Missing `AGENTS.md` and global skills | `AGENTS.md` linked, all 8 global skills active, project skill `init-site` preserved | Zed Agent Skills |
 | **Git Hygiene** | Stray `cio.log` in repository root | Deleted `cio.log`, added `*.log` to `.gitignore` | `package-scaffolding` |
 | **Relative Paths** | `REPO_ROOT` assumed 2 levels down (`../..`) | Updated to `SCRIPT_DIR/..` for `admin/` and `ceremonies/` | `script-conventions` |
-| **Shared Primitives** | In-script duplication of Diceware generation | Sourcing `lib-secret.sh` from `~/.local/lib/dev-bootstrap` | Developer Platform Library |
+| **Shared Primitives** | In-script duplication & individual script sourcing | Sourcing unified `lib-common.sh` from `~/.local/lib/dev-bootstrap` with strict error notification and no fallback duplication | Developer Platform Library |
+| **XO VM Deployment** | Hand-rolled `curl` REST API calls | Switched to `xo-cli` (`vm.create`, `list-objects`) | Hypervisor Tooling |
+| **Site Selection** | Exiting with usage on missing argument | Integrated `resolve_site` and `resolve_or_create_site` interactive menus | `site-conf-pattern` |
 
 ---
 

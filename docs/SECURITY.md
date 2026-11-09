@@ -70,7 +70,7 @@ Administrative logins and cryptographic key generation across both VMs employ an
   - **5 Words + 7 Chunked Digits (High-Paranoia Option):**
     - Total Entropy: $\approx \mathbf{87.84\text{ bits}}$ ($\approx 2.84 \times 10^{26}$ combinations).
 * **Proof-of-Capture Enforcement:**
-  - Used for both initial VM login (`/etc/profile.d/99-first-login-ceremony.sh`), Root CA key generation (`init-root-ca.sh`), and Intermediate CA daemon password generation (`request-intermediate.sh`).
+  - Used for both initial VM login (`/etc/profile.d/99-first-login-ceremony.sh`), Root CA key generation (`ceremonies/ca-root-init.sh`), and Intermediate CA daemon password generation (`provisioning/guest-scripts/ica-request-csr.sh`).
   - Requires the administrator to type `captured` or `got it` after storing the phrase in their password manager.
   - Requires re-typing/pasting the exact passphrase to verify capture before proceeding.
 * **Console Resilience:**

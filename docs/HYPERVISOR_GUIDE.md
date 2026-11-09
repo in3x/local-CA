@@ -37,13 +37,13 @@ XO will automatically generate and attach an ephemeral config drive during first
 ### Alternative Method: Generate NoCloud ISOs
 If deploying via standard VM templates without native cloud-init injection:
 ```bash
-cd /path/to/local-CA/admin
+cd /path/to/local-CA
 
 # Build Root CA ISO
-./build-cidata-iso.sh root-ca /path/to/iso-sr/root-ca-cidata.iso
+./admin/ca-iso-build.sh root-ca /path/to/iso-sr/root-ca-cidata.iso
 
 # Build Intermediate CA ISO
-./build-cidata-iso.sh intermediate-ca /path/to/iso-sr/intermediate-ca-cidata.iso
+./admin/ca-iso-build.sh intermediate-ca /path/to/iso-sr/intermediate-ca-cidata.iso
 ```
 Place these `.iso` files inside your XCP-ng ISO Storage Repository (NFS or SMB share).
 
@@ -121,7 +121,7 @@ If you prefer keeping the Root CA completely air-gapped on physical media:
      echo "deb [signed-by=/etc/apt/trusted.gpg.d/smallstep.gpg] https://packages.smallstep.com/debian-security/ stable main" | sudo tee /etc/apt/sources.list.d/smallstep.list
      sudo apt update && sudo apt install step-cli magic-wormhole
      ```
-   - Run `init-root-ca.sh` and `sign-intermediate.sh` targeting the mounted USB path (`STEPPATH=/mnt/d/step-ca`).
+   - Run `ceremonies/ca-root-init.sh` and `ceremonies/ca-intermediate-sign.sh` targeting the mounted USB path (`STEPPATH=/mnt/d/step-ca`).
    - Unmount and physically disconnect the USB drive when done.
 
 ---
@@ -131,21 +131,21 @@ If you prefer keeping the Root CA completely air-gapped on physical media:
 ```
 [ Intermediate VM ]                          [ Root CA Host ]
        |                                             |
-1. Run request-intermediate-csr.sh                   |
+1. Run ica-request-csr.sh                            |
    -> Generates intermediate_ca_key                  |
    -> Generates intermediate.csr                     |
        |                                             |
 2. wormhole send intermediate.csr                    |
    (Code: 7-galaxy-meteor) ------------------------> 3. wormhole receive 7-galaxy-meteor
                                                      |
-                                                     4. Run sign-intermediate.sh
+                                                     4. Run ca-intermediate-sign.sh
                                                         -> Enters Root Passphrase
                                                         -> Generates intermediate_ca.crt
                                                      |
 6. wormhole receive 3-comet-orbit <----------------- 5. wormhole send intermediate_ca.crt
                                                         wormhole send root_ca.crt
        |                                             |
-7. Run bootstrap-intermediate.sh                     8. Power off Root CA VM
+7. Run ica-bootstrap.sh                              8. Power off Root CA VM
    -> Sets ca.json & permissions                        (Detach virtual cable)
    -> Starts step-ca.service
        |

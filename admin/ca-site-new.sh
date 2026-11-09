@@ -4,7 +4,7 @@ set -euo pipefail
 # Scaffolds a new site configuration directory from the conf/ templates,
 # generates a unique initial temporary bootstrap password with proof-of-capture ceremony,
 # and renders customized cloud-init manifests for Xen Orchestra / hypervisor deployment.
-# Usage: ./new-site.sh <site-id> [domain] [organization]
+# Usage: ./admin/ca-site-new.sh [site-id] [domain] [organization]
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -12,32 +12,36 @@ CONF_DIR="${REPO_ROOT}/conf"
 SITE_CONF_DIR="${REPO_ROOT}/site-conf"
 WORD_LIST="${REPO_ROOT}/provisioning/wordlists/eff-large-words.txt"
 
-# Load shared dev-bootstrap library
+# Load shared dev-bootstrap library (strictly require it; no fallback code)
 DEV_BOOTSTRAP_LIB="${HOME}/.local/lib/dev-bootstrap"
-if [[ ! -f "$DEV_BOOTSTRAP_LIB/lib-secret.sh" ]]; then
+if [[ ! -f "$DEV_BOOTSTRAP_LIB/lib-common.sh" ]]; then
   echo "[-] Error: Shared platform library not found at $DEV_BOOTSTRAP_LIB" >&2
   echo "    Please run the host bootstrap to install it:" >&2
   echo "      bash ~/Projects/zed-standards/admin/host-bootstrap.sh --lib-only" >&2
   exit 1
 fi
-source "$DEV_BOOTSTRAP_LIB/lib-secret.sh"
+source "$DEV_BOOTSTRAP_LIB/lib-common.sh"
 
-SITE_ID="${1:-}"
-DOMAIN="${2:-}"
-ORG="${3:-}"
-
-if [ -z "${SITE_ID}" ]; then
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   echo "========================================================="
   echo " New Site Configuration Scaffolding"
   echo "========================================================="
-  echo "Usage: $0 <site-id> [domain] [organization]"
+  echo "Usage: $0 [site-id] [domain] [organization]"
   echo ""
   echo "Examples:"
   echo "  $0 lab-dc"
   echo "  $0 lab-dc lab.example.com \"Lab Network\""
-  echo ""
-  exit 1
+  echo "========================================================="
+  exit 0
 fi
+
+SITE_ID="${1:-}"
+if [[ -z "${SITE_ID}" ]]; then
+  SITE_ID="$(resolve_or_create_site "" "${SITE_CONF_DIR}")"
+fi
+
+DOMAIN="${2:-}"
+ORG="${3:-}"
 
 TARGET_DIR="${SITE_CONF_DIR}/${SITE_ID}"
 

@@ -7,15 +7,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# Load shared dev-bootstrap library
+# Load shared dev-bootstrap library (strictly require it; no fallback code)
 DEV_BOOTSTRAP_LIB="${HOME}/.local/lib/dev-bootstrap"
-if [[ ! -f "$DEV_BOOTSTRAP_LIB/lib-secret.sh" ]]; then
+if [[ ! -f "$DEV_BOOTSTRAP_LIB/lib-common.sh" ]]; then
   echo "[-] Error: Shared platform library not found at $DEV_BOOTSTRAP_LIB" >&2
   echo "    Please run the host bootstrap to install it:" >&2
   echo "      bash ~/Projects/zed-standards/admin/host-bootstrap.sh --lib-only" >&2
   exit 1
 fi
-source "$DEV_BOOTSTRAP_LIB/lib-secret.sh"
+source "$DEV_BOOTSTRAP_LIB/lib-common.sh"
 
 STEPPATH="${STEPPATH:-/etc/step-ca}"
 CERTS_DIR="${STEPPATH}/certs"

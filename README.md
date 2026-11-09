@@ -24,35 +24,44 @@ Designed for hypervisors (XCP-ng, TrueNAS, Proxmox, or QEMU/KVM) using decoupled
 ## Repository Structure
 
 ```
-├── conf/
-│   ├── site.env.example       # Template environment variables for a site/cluster
-│   └── inventory.yaml.example # Template non-ACME device declaration inventory
+├── admin/                         # Host & Workstation Administration Tools
+│   ├── ca-site-new.sh             # Scaffolds new site profile & passwords
+│   ├── ca-vm-deploy.sh            # Deploys VMs via Xen Orchestra (xo-cli)
+│   ├── ca-iso-build.sh            # Builds NoCloud cidata ISO for manual installs
+│   └── ca-manifest-render.sh      # Renders customized site Cloud-Init manifests
 │
-├── site-conf/                 # (Git-ignored) Local site configurations
-│   ├── .gitignore             # Enforces strict isolation of all site configs
-│   └── <site-id>/             # Local site configurations (e.g. pw-dc)
+├── ceremonies/                    # Air-Gapped & Interactive PKI Ceremonies
+│   ├── ca-root-init.sh            # Offline Root CA generation & proof-of-capture ceremony
+│   └── ca-intermediate-sign.sh    # Signs Intermediate CSR using Root CA key
+│
+├── conf/
+│   ├── site.env.example           # Template environment variables for a site/cluster
+│   ├── inventory.yaml.example     # Template non-ACME device declaration inventory
+│   └── xo.env.example             # Template Xen Orchestra connection settings
+│
+├── site-conf/                     # (Git-ignored) Local site configurations
+│   ├── .gitignore                 # Enforces strict isolation of all site configs
+│   └── <site-id>/                 # Local site configurations (e.g. pw-dc)
 │
 ├── docs/
-│   ├── DESIGN.md              # Topology, certificate profiles, and recovery strategy
-│   ├── SECURITY.md            # Threat model, key storage, passphrase policies
-│   ├── ANTI-PATTERNS.md       # Explicitly rejected designs and rationales
-│   └── HYPERVISOR_GUIDE.md    # XCP-ng, TrueNAS, and WSL2 VM build specifics
+│   ├── DESIGN.md                  # Topology, certificate profiles, and recovery strategy
+│   ├── SECURITY.md                # Threat model, key storage, passphrase policies
+│   ├── ANTI-PATTERNS.md           # Explicitly rejected designs and rationales
+│   └── HYPERVISOR_GUIDE.md        # XCP-ng, TrueNAS, and WSL2 VM build specifics
 │
 ├── provisioning/
 │   ├── cloud-init/
-│   │   ├── root-ca/           # user-data & meta-data for Root CA
-│   │   └── intermediate-ca/   # user-data & meta-data for Intermediate CA
+│   │   ├── root-ca/               # user-data & meta-data for Root CA
+│   │   └── intermediate-ca/       # user-data & meta-data for Intermediate CA
+│   ├── guest-scripts/             # Injected scripts executed inside the guest VM
+│   │   ├── ica-request-csr.sh     # Intermediate key & CSR generation inside VM
+│   │   └── ica-bootstrap.sh       # Intermediate service assembler & starter inside VM
 │   ├── step-ca/
 │   │   ├── templates/
-│   │   │   └── x509-leaf.tpl  # Baseline Go template for common attributes
-│   │   └── ica-config.json.tpl# Reference Step-CA intermediate configuration
-│   └── scripts/
-│       ├── new-site.sh               # Scaffolds site-conf/<site-id>/ from templates
-│       ├── build-cidata-iso.sh       # Builds NoCloud ISOs for VM first-boot
-│       ├── init-root-ca.sh           # Offline Root CA generation ceremony
-│       ├── request-intermediate.sh   # Intermediate key & CSR generation
-│       ├── sign-intermediate.sh      # Root CA signature ceremony
-│       └── bootstrap-intermediate.sh # Intermediate service assembler & starter
+│   │   │   └── x509-leaf.tpl      # Baseline Go template for common attributes
+│   │   └── ica-config.json.tpl    # Reference Step-CA intermediate configuration
+│   └── wordlists/
+│       └── eff-large-words.txt    # EFF large wordlist for Diceware passphrases
 ```
 
 ---
@@ -100,9 +109,8 @@ The agent will query you for the site parameters (site ID, organization name, do
 #### Method B: Generic / Manual Hypervisor (Using NoCloud ISOs)
 If your hypervisor does not support direct cloud-init text injection:
 ```bash
-# Scripts organized in admin/ and ceremonies/
-./build-cidata-iso.sh root-ca /path/to/iso-sr/root-ca-cidata.iso
-./build-cidata-iso.sh intermediate-ca /path/to/iso-sr/intermediate-ca-cidata.iso
+./admin/ca-iso-build.sh root-ca /path/to/iso-sr/root-ca-cidata.iso
+./admin/ca-iso-build.sh intermediate-ca /path/to/iso-sr/intermediate-ca-cidata.iso
 ```
 Attach each generated `.iso` to the respective VM's CD drive before first boot.
 

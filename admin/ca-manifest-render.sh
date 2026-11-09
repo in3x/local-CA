@@ -2,22 +2,29 @@
 set -euo pipefail
 
 # Renders customized cloud-init user-data manifests for a specific site.
-# Usage: ./render-cloud-init.sh <site-id>
+# Usage: ./admin/ca-manifest-render.sh [site-id]
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SITE_CONF_DIR="${REPO_ROOT}/site-conf"
 CLOUD_INIT_DIR="${REPO_ROOT}/provisioning/cloud-init"
 
-SITE_ID="${1:-}"
-
-if [ -z "${SITE_ID}" ] || [ ! -d "${SITE_CONF_DIR}/${SITE_ID}" ]; then
-  echo "Usage: $0 <site-id>"
-  echo "Available sites in site-conf/:"
-  ls -1 "${SITE_CONF_DIR}" 2>/dev/null | grep -v '^\.' || echo "(none)"
+# Load shared dev-bootstrap library (strictly require it; no fallback code)
+DEV_BOOTSTRAP_LIB="${HOME}/.local/lib/dev-bootstrap"
+if [[ ! -f "$DEV_BOOTSTRAP_LIB/lib-common.sh" ]]; then
+  echo "[-] Error: Shared platform library not found at $DEV_BOOTSTRAP_LIB" >&2
+  echo "    Please run the host bootstrap to install it:" >&2
+  echo "      bash ~/Projects/zed-standards/admin/host-bootstrap.sh --lib-only" >&2
   exit 1
 fi
+source "$DEV_BOOTSTRAP_LIB/lib-common.sh"
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  echo "Usage: $0 [site-id]"
+  exit 0
+fi
+
+SITE_ID="$(resolve_site "${1:-}" "${SITE_CONF_DIR}")"
 SITE_DIR="${SITE_CONF_DIR}/${SITE_ID}"
 SITE_ENV="${SITE_DIR}/site.env"
 
